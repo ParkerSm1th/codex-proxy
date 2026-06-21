@@ -24,6 +24,18 @@ describe("request format detection", () => {
     ).toBe(false);
   });
 
+  it("maps gpt-5.5-extra to upstream gpt-5.5 with xhigh reasoning", () => {
+    const body = normalizeCursorResponsesBody({
+      model: "gpt-5.5-extra",
+      input: [{ type: "message", role: "user", content: [{ type: "input_text", text: "hi" }] }]
+    });
+
+    expect(body).toMatchObject({
+      model: "gpt-5.5",
+      reasoning: { effort: "xhigh" }
+    });
+  });
+
   it("normalizes Cursor responses payloads for Codex upstream", () => {
     const body = normalizeCursorResponsesBody({
       model: "gpt-5.5-high",

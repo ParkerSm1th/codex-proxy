@@ -1,8 +1,9 @@
 import { jsonError } from "../auth";
+import { dashboardCors } from "../cors";
 import type { RuntimeEnv } from "../env";
+import { clientIp, checkRateLimit, rateLimitResponse } from "../rate-limit";
 import {
   createApiKey,
-  claimAccount,
   DashboardError,
   getCodexStatus,
   linkCodexAuth,
@@ -12,12 +13,17 @@ import {
   revokeApiKey
 } from "./service";
 import { getSavingsSummary, listRequestLogs } from "./request-logs";
+import { PasswordPolicyError } from "./password";
 import {
   clearSessionCookie,
   createSession as issueSession,
   getSessionUser,
+  invalidateUserSessions,
   sessionCookie
 } from "./session";
+
+const LOGIN_LIMIT = 10;
+const LOGIN_WINDOW_MS = 60_000;
 
 export async function handleDashboardRequest(
   request: Request,
@@ -41,29 +47,20 @@ export async function handleDashboardRequest(
         password: body.password,
         displayName: body.displayName ?? null
       });
+      await invalidateUserSessions(env, userId);
       const token = await issueSession(env, userId);
       return dashboardJson({ user: await getSessionUser(env, withSession(request, token)) }, 201, {
         "Set-Cookie": sessionCookie(token, request)
       });
     }
 
-    if (url.pathname === "/api/auth/claim" && request.method === "POST") {
-      const body = (await request.json()) as { email?: string; password?: string };
-      if (!body.email || !body.password) {
-        return dashboardJson({ error: "Email and password are required" }, 400);
+    if (url.pathname === "/api/auth/login" && request.method === "POST") {
+      const rateKey = `login:${clientIp(request)}`;
+      const rate = checkRateLimit(rateKey, LOGIN_LIMIT, LOGIN_WINDOW_MS);
+      if (!rate.allowed) {
+        return rateLimitResponse(rate.retryAfterSeconds ?? 60);
       }
 
-      const { userId } = await claimAccount(env, {
-        email: body.email.trim().toLowerCase(),
-        password: body.password
-      });
-      const token = await issueSession(env, userId);
-      return dashboardJson({ user: await getSessionUser(env, withSession(request, token)) }, 200, {
-        "Set-Cookie": sessionCookie(token, request)
-      });
-    }
-
-    if (url.pathname === "/api/auth/login" && request.method === "POST") {
       const body = (await request.json()) as { email?: string; password?: string };
       if (!body.email || !body.password) {
         return dashboardJson({ error: "Email and password are required" }, 400);
@@ -73,6 +70,7 @@ export async function handleDashboardRequest(
         email: body.email.trim().toLowerCase(),
         password: body.password
       });
+      await invalidateUserSessions(env, userId);
       const token = await issueSession(env, userId);
       return dashboardJson({ user: await getSessionUser(env, withSession(request, token)) }, 200, {
         "Set-Cookie": sessionCookie(token, request)
@@ -141,8 +139,8 @@ export async function handleDashboardRequest(
 
     if (url.pathname === "/api/requests" && request.method === "GET") {
       const user = await requireUser(env, request);
-      const limit = Number(url.searchParams.get("limit") ?? "50");
-      return dashboardJson({ requests: await listRequestLogs(env, user.id, Math.min(limit, 200)) });
+      const limit = parseLimitParam(url.searchParams.get("limit"));
+      return dashboardJson({ requests: await listRequestLogs(env, user.id, limit) });
     }
 
     if (url.pathname === "/api/stats/savings" && request.method === "GET") {
@@ -156,7 +154,18 @@ export async function handleDashboardRequest(
       return dashboardJson({ error: error.message }, error.status);
     }
 
-    return dashboardJson({ error: error instanceof Error ? error.message : "Unexpected error" }, 500);
+    if (error instanceof PasswordPolicyError) {
+      return dashboardJson({ error: error.message }, 400);
+    }
+
+    console.error(
+      JSON.stringify({
+        level: "error",
+        event: "dashboard_request_error",
+        error: error instanceof Error ? error.message : "Unexpected error"
+      })
+    );
+    return dashboardJson({ error: "Internal server error" }, 500);
   }
 }
 
@@ -174,6 +183,14 @@ function withSession(request: Request, token: string): Request {
   return new Request(request.url, { headers, method: request.method });
 }
 
+function parseLimitParam(value: string | null, defaultLimit = 50, maxLimit = 200): number {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    return defaultLimit;
+  }
+  return Math.min(parsed, maxLimit);
+}
+
 function dashboardJson(body: unknown, status = 200, extraHeaders: Record<string, string> = {}): Response {
   const headers = new Headers({
     "Content-Type": "application/json",
@@ -181,13 +198,4 @@ function dashboardJson(body: unknown, status = 200, extraHeaders: Record<string,
     ...extraHeaders
   });
   return new Response(JSON.stringify(body), { status, headers });
-}
-
-export function dashboardCors(response: Response): Response {
-  const headers = new Headers(response.headers);
-  headers.set("Access-Control-Allow-Origin", "*");
-  headers.set("Access-Control-Allow-Headers", "Authorization, Content-Type");
-  headers.set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
-  headers.set("Access-Control-Allow-Credentials", "true");
-  return new Response(response.body, { status: response.status, headers });
 }

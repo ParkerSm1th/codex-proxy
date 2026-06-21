@@ -18,6 +18,8 @@ export class TokenBroker extends DurableObject<RuntimeEnv> {
   private refreshPromise: Promise<BrokerAccessToken> | undefined;
 
   async getAccessToken(userId: string, forceRefresh = false): Promise<BrokerAccessToken> {
+    assertBrokerUserId(this.env, this.ctx.id, userId);
+
     const current = await this.loadTokenBundle(userId);
 
     if (!forceRefresh && isAccessTokenFresh(current.bundle)) {
@@ -139,6 +141,13 @@ export class TokenBroker extends DurableObject<RuntimeEnv> {
     )
       .bind(now, now, userId)
       .run();
+  }
+}
+
+export function assertBrokerUserId(env: RuntimeEnv, durableObjectId: DurableObjectId, userId: string): void {
+  const expectedId = env.TOKEN_BROKER.idFromName(userId);
+  if (!durableObjectId.equals(expectedId)) {
+    throw new Error("userId does not match this token broker instance");
   }
 }
 

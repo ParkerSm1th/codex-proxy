@@ -1,3 +1,5 @@
+# Do not expose this relay publicly without UPSTREAM_RELAY_TOKEN authentication.
+# The Worker sends X-Relay-Token when UPSTREAM_RELAY_TOKEN is configured.
 app = "codex-proxy-relay"
 primary_region = "iad"
 

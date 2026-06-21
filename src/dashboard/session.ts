@@ -33,6 +33,21 @@ export async function deleteSession(env: RuntimeEnv, token: string): Promise<voi
   await env.DB.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(tokenHash).run();
 }
 
+export async function invalidateUserSessions(
+  env: RuntimeEnv,
+  userId: string,
+  exceptTokenHash?: string
+): Promise<void> {
+  if (exceptTokenHash) {
+    await env.DB.prepare("DELETE FROM sessions WHERE user_id = ? AND token_hash != ?")
+      .bind(userId, exceptTokenHash)
+      .run();
+    return;
+  }
+
+  await env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(userId).run();
+}
+
 export async function getSessionUser(env: RuntimeEnv, request: Request): Promise<DashboardUser | null> {
   const token = getSessionToken(request);
   if (!token) {

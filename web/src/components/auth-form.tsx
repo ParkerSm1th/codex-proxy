@@ -87,6 +87,7 @@ export function AuthForm({ title, description, submitLabel, onSubmit, showDispla
                   type="password"
                   autoComplete="current-password"
                   required
+                  minLength={8}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                 />
@@ -104,21 +105,10 @@ export function AuthForm({ title, description, submitLabel, onSubmit, showDispla
   );
 }
 
-export function AuthLinks() {
+export function AuthFooter() {
   return (
-    <div className="space-y-2">
-      <p>
-        New here?{" "}
-        <Link className="text-primary underline-offset-4 hover:underline" to="/register">
-          Create an account
-        </Link>
-      </p>
-      <p>
-        Provisioned via CLI?{" "}
-        <Link className="text-primary underline-offset-4 hover:underline" to="/claim">
-          Set a password
-        </Link>
-      </p>
-    </div>
+    <p className="text-sm text-muted-foreground">
+      Accounts are provisioned by your team admin via the CLI. Contact them if you need access.
+    </p>
   );
 }

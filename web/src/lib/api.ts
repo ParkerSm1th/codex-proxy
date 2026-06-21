@@ -82,16 +82,6 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ email, password })
     }),
-  register: (email: string, password: string, displayName?: string) =>
-    request<{ user: DashboardUser }>("/api/auth/register", {
-      method: "POST",
-      body: JSON.stringify({ email, password, displayName })
-    }),
-  claim: (email: string, password: string) =>
-    request<{ user: DashboardUser }>("/api/auth/claim", {
-      method: "POST",
-      body: JSON.stringify({ email, password })
-    }),
   logout: () => request<{ ok: boolean }>("/api/auth/logout", { method: "POST" }),
   listKeys: () => request<{ keys: ApiKeySummary[] }>("/api/keys"),
   createKey: (label: string) =>

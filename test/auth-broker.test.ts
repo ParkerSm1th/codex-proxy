@@ -40,11 +40,12 @@ describe("TokenBroker", () => {
     vi.stubGlobal("fetch", refreshFetch);
 
     const updates: unknown[][] = [];
-    const broker = new TokenBroker({} as DurableObjectState, createEnv(encrypted, updates));
+    const userId = "user-1";
+    const broker = new TokenBroker(mockBrokerCtx(userId), createEnv(encrypted, updates, userId));
 
     const [first, second] = await Promise.all([
-      broker.getAccessToken("user-1", true),
-      broker.getAccessToken("user-1", true)
+      broker.getAccessToken(userId, true),
+      broker.getAccessToken(userId, true)
     ]);
 
     expect(first.accessToken).toBe("new-access");
@@ -54,7 +55,7 @@ describe("TokenBroker", () => {
   });
 });
 
-function createEnv(encrypted: string, updates: unknown[][]): RuntimeEnv {
+function createEnv(encrypted: string, updates: unknown[][], userId: string): RuntimeEnv {
   return {
     API_KEY_PEPPER: "pepper",
     TOKEN_ENCRYPTION_KEY: tokenSecret,
@@ -86,9 +87,21 @@ function createEnv(encrypted: string, updates: unknown[][]): RuntimeEnv {
       }
     },
     TOKEN_BROKER: {
+      idFromName: (name: string) => mockDurableObjectId(name),
       getByName: () => {
         throw new Error("not used");
       }
     }
   } as unknown as RuntimeEnv;
+}
+
+function mockBrokerCtx(userId: string): DurableObjectState {
+  return { id: mockDurableObjectId(userId) } as DurableObjectState;
+}
+
+function mockDurableObjectId(value: string): DurableObjectId {
+  return {
+    toString: () => value,
+    equals: (other: DurableObjectId) => other.toString() === value
+  } as DurableObjectId;
 }

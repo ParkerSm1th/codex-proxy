@@ -199,7 +199,9 @@ function fakeD1(keyHash: string, encrypted: string): D1Database {
                   id: "user-1",
                   email: "user@example.com",
                   display_name: "User",
-                  chatgpt_account_id: "account"
+                  chatgpt_account_id: "account",
+                  api_key_id: "key-1",
+                  key_hash: keyHash
                 };
               }
 

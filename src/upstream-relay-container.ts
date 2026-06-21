@@ -8,8 +8,17 @@ export class CodexUpstreamRelay extends Container<RuntimeEnv> {
   override sleepAfter = "30m";
   override enableInternet = true;
   override pingEndpoint = "/health";
-  override envVars = {
-    CODEX_TARGET_URL: DEFAULT_CODEX_UPSTREAM_URL,
-    PORT: "8790"
-  };
+
+  constructor(ctx: DurableObjectState, env: RuntimeEnv) {
+    super(ctx as DurableObjectState<RuntimeEnv>, env);
+    const vars: Record<string, string> = {
+      CODEX_TARGET_URL: DEFAULT_CODEX_UPSTREAM_URL,
+      PORT: "8790"
+    };
+    const relayToken = env.UPSTREAM_RELAY_TOKEN?.trim();
+    if (relayToken) {
+      vars.UPSTREAM_RELAY_TOKEN = relayToken;
+    }
+    this.envVars = vars;
+  }
 }

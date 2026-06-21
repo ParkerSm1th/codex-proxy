@@ -23,6 +23,8 @@ jobs:
 
       - run: npm ci --prefix web
 
+      - run: npm test
+
       - run: npm run build:web
 
       - name: Deploy Worker and Container

@@ -1,6 +1,7 @@
 import type { RuntimeEnv } from "./env";
 import { sanitizeCodexUpstreamBody } from "./request-format";
 import { CODEX_ORIGINATOR, DEFAULT_CODEX_UPSTREAM_URL, USER_AGENT } from "./constants";
+import { resolveCodexRelayUrl } from "./relay-url";
 import type { AuthenticatedUser, BrokerAccessToken, OpenAIError } from "./types";
 
 export interface CodexFetchOptions {
@@ -56,6 +57,8 @@ async function postCodex(
     headers.set("ChatGPT-Account-Id", accountId);
   }
 
+  applyRelayAuthHeader(env, headers);
+
   const init: RequestInit = {
     method: "POST",
     headers,
@@ -66,19 +69,20 @@ async function postCodex(
     init.signal = options.signal;
   }
 
-  if (env.CODEX_RELAY_URL) {
+  const relayUrl = resolveCodexRelayUrl(env);
+  if (relayUrl) {
     console.log(
       JSON.stringify({
         level: "info",
         event: "codex_upstream_fetch",
         request_id: options.requestId,
         upstream_mode: "external_relay",
-        upstream_host: safeHost(env.CODEX_RELAY_URL),
+        upstream_host: safeHost(relayUrl),
         user_id: user.id,
         has_account_id: Boolean(accountId)
       })
     );
-    return fetch(env.CODEX_RELAY_URL, init);
+    return fetch(relayUrl, init);
   }
 
   if (env.ENABLE_CONTAINER_RELAY === "true" && env.UPSTREAM_RELAY) {
@@ -112,7 +116,7 @@ async function postCodex(
 }
 
 export function resolveUpstreamMode(env: RuntimeEnv): string {
-  if (env.CODEX_RELAY_URL) {
+  if (resolveCodexRelayUrl(env)) {
     return "external_relay";
   }
 
@@ -121,6 +125,13 @@ export function resolveUpstreamMode(env: RuntimeEnv): string {
   }
 
   return "direct";
+}
+
+function applyRelayAuthHeader(env: RuntimeEnv, headers: Headers): void {
+  const relayToken = env.UPSTREAM_RELAY_TOKEN?.trim();
+  if (relayToken) {
+    headers.set("X-Relay-Token", relayToken);
+  }
 }
 
 async function postCodexViaContainer(env: RuntimeEnv, init: RequestInit): Promise<Response> {
@@ -140,7 +151,7 @@ async function postCodexViaContainer(env: RuntimeEnv, init: RequestInit): Promis
 
 export async function openAIErrorFromUpstream(response: Response): Promise<Response> {
   const contentType = response.headers.get("content-type") ?? "";
-  let message = `Codex upstream returned ${response.status}`;
+  let upstreamDetail: string | undefined;
 
   if (contentType.includes("application/json")) {
     const payload = (await response.json().catch(() => null)) as {
@@ -148,25 +159,33 @@ export async function openAIErrorFromUpstream(response: Response): Promise<Respo
       message?: string;
       detail?: string;
     } | null;
-    message =
+    upstreamDetail =
       payload?.error?.message ??
       payload?.message ??
       payload?.detail ??
-      message;
+      undefined;
   } else {
     const text = await response.text().catch(() => "");
     const cfMitigated = response.headers.get("cf-mitigated");
     if (cfMitigated) {
-      message = `Codex upstream blocked the request with a Cloudflare challenge (${cfMitigated})`;
+      upstreamDetail = `Cloudflare challenge (${cfMitigated})`;
     } else if (text.includes("Just a moment")) {
-      message = "Codex upstream blocked the request with a Cloudflare challenge page";
-    } else if (text.length > 0 && text.length < 500) {
-      message = text;
-    } else if (text.length > 0) {
-      message = `${message}: ${text.slice(0, 200)}`;
+      upstreamDetail = "Cloudflare challenge page";
     }
   }
 
+  if (upstreamDetail) {
+    console.warn(
+      JSON.stringify({
+        level: "warn",
+        event: "codex_upstream_error",
+        status: response.status,
+        detail: upstreamDetail.slice(0, 500)
+      })
+    );
+  }
+
+  const message = genericUpstreamMessage(response.status);
   const error: OpenAIError = {
     error: {
       message,
@@ -179,6 +198,22 @@ export async function openAIErrorFromUpstream(response: Response): Promise<Respo
     status: response.status,
     headers: { "Cache-Control": "no-store" }
   });
+}
+
+function genericUpstreamMessage(status: number): string {
+  if (status === 401) {
+    return "Codex upstream rejected the request (authentication failed)";
+  }
+  if (status === 403) {
+    return "Codex upstream rejected the request (forbidden)";
+  }
+  if (status === 429) {
+    return "Codex upstream rate limit exceeded";
+  }
+  if (status >= 500) {
+    return "Codex upstream server error";
+  }
+  return `Codex upstream request failed (${status})`;
 }
 
 function safeHost(url: string): string {

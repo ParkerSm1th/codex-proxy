@@ -1,5 +1,6 @@
 import type { RuntimeEnv } from "./env";
 import { authenticateRequest, errorResponse, jsonError, type AuthResult } from "./auth";
+import { v1Cors } from "./cors";
 import { fetchCodexResponses, openAIErrorFromUpstream, resolveUpstreamMode } from "./codex";
 import { normalizeModel, openAIModelsResponse } from "./models";
 import { createRequestLogger, withRequestId, type RequestLogger } from "./observability";
@@ -37,7 +38,7 @@ export async function handleOpenAICompatibleRequest(
 
   try {
     if (request.method === "OPTIONS") {
-      return cors(new Response(null, { status: 204 }));
+      return v1Cors(new Response(null, { status: 204 }));
     }
 
     const url = new URL(request.url);
@@ -45,24 +46,24 @@ export async function handleOpenAICompatibleRequest(
     log = createRequestLogger(request, auth.user);
 
     if (url.pathname === "/v1/models" && request.method === "GET") {
-      const response = cors(Response.json(openAIModelsResponse(), { headers: { "Cache-Control": "no-store" } }));
+      const response = v1Cors(Response.json(openAIModelsResponse(), { headers: { "Cache-Control": "no-store" } }));
       log.complete(response.status, startedAt, { route: "models" });
       return withRequestId(response, log.context.requestId);
     }
 
     if (url.pathname === "/v1/chat/completions" && request.method === "POST") {
-      const response = cors(await handleChatCompletions(request, env, auth, ctx, log));
+      const response = v1Cors(await handleChatCompletions(request, env, auth, ctx, log));
       log.complete(response.status, startedAt, { route: "chat_completions" });
       return withRequestId(response, log.context.requestId);
     }
 
     if (url.pathname === "/v1/responses" && request.method === "POST") {
-      const response = cors(await handleResponsesPassthrough(request, env, auth, ctx, log));
+      const response = v1Cors(await handleResponsesPassthrough(request, env, auth, ctx, log));
       log.complete(response.status, startedAt, { route: "responses" });
       return withRequestId(response, log.context.requestId);
     }
 
-    const response = cors(jsonError("Route not found", 404, "invalid_request_error", "not_found"));
+    const response = v1Cors(jsonError("Route not found", 404, "invalid_request_error", "not_found"));
     log.complete(response.status, startedAt, { route: "not_found" });
     return withRequestId(response, log.context.requestId);
   } catch (error) {
@@ -70,7 +71,7 @@ export async function handleOpenAICompatibleRequest(
       error: error instanceof Error ? error.message : "Unexpected server error",
       error_name: error instanceof Error ? error.name : "unknown"
     });
-    const response = cors(errorResponse(error));
+    const response = v1Cors(errorResponse(error));
     log.complete(response.status, startedAt, { route: "error" });
     return withRequestId(response, log.context.requestId);
   }
@@ -281,15 +282,3 @@ function filterPassthroughHeaders(headers: Headers): Headers {
   return next;
 }
 
-export function cors(response: Response): Response {
-  const headers = new Headers(response.headers);
-  headers.set("Access-Control-Allow-Origin", "*");
-  headers.set("Access-Control-Allow-Headers", "Authorization, Content-Type");
-  headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  headers.set("Access-Control-Expose-Headers", "X-Request-Id");
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers
-  });
-}

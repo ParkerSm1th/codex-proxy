@@ -2,12 +2,23 @@ import { createServer } from "node:http";
 
 const target = process.env.CODEX_TARGET_URL ?? "https://chatgpt.com/backend-api/codex/responses";
 const port = Number(process.env.PORT ?? 8790);
+const relayToken = process.env.UPSTREAM_RELAY_TOKEN?.trim();
 
 createServer(async (request, response) => {
   if (request.method === "GET" && (request.url === "/health" || request.url === "/")) {
     response.writeHead(200, { "Content-Type": "application/json" });
     response.end(JSON.stringify({ status: "ok" }));
     return;
+  }
+
+  if (relayToken) {
+    const provided = request.headers["x-relay-token"];
+    const tokenValue = Array.isArray(provided) ? provided[0] : provided;
+    if (tokenValue !== relayToken) {
+      response.writeHead(401, { "Content-Type": "application/json" });
+      response.end(JSON.stringify({ error: "Unauthorized" }));
+      return;
+    }
   }
 
   if (request.method !== "POST") {
@@ -23,7 +34,7 @@ createServer(async (request, response) => {
     if (!value || key === "host" || key === "content-length" || key === "connection") {
       continue;
     }
-    if (key.startsWith("cf-") || key === "cdn-loop") {
+    if (key.startsWith("cf-") || key === "cdn-loop" || key === "x-relay-token") {
       continue;
     }
     headers.set(key, Array.isArray(value) ? value.join(", ") : value);
@@ -55,6 +66,11 @@ createServer(async (request, response) => {
 }).listen(port, "0.0.0.0", () => {
   console.log(`Codex upstream relay listening on 0.0.0.0:${port}`);
   console.log(`Forwarding to ${target}`);
+  if (relayToken) {
+    console.log("Relay token authentication is enabled (X-Relay-Token required)");
+  } else {
+    console.warn("WARNING: UPSTREAM_RELAY_TOKEN is not set — relay accepts unauthenticated requests");
+  }
 });
 
 function readBody(request) {

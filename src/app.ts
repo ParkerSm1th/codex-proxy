@@ -1,6 +1,7 @@
-import { handleOpenAICompatibleRequest, cors } from "./openai-compatible";
-import { dashboardCors, handleDashboardRequest } from "./dashboard/router";
+import { handleOpenAICompatibleRequest } from "./openai-compatible";
+import { handleDashboardRequest } from "./dashboard/router";
 import { jsonError } from "./auth";
+import { dashboardCors, v1Cors } from "./cors";
 import type { RuntimeEnv } from "./env";
 
 export default {
@@ -8,17 +9,17 @@ export default {
     const url = new URL(request.url);
 
     if (url.pathname === "/health") {
-      return cors(Response.json({ status: "ok" }, { headers: { "Cache-Control": "no-store" } }));
+      return v1Cors(Response.json({ status: "ok" }, { headers: { "Cache-Control": "no-store" } }));
     }
 
     if (url.pathname.startsWith("/api/")) {
       if (request.method === "OPTIONS") {
-        return dashboardCors(new Response(null, { status: 204 }));
+        return dashboardCors(request, new Response(null, { status: 204 }));
       }
 
       const dashboardResponse = await handleDashboardRequest(request, env, ctx);
       if (dashboardResponse) {
-        return dashboardCors(dashboardResponse);
+        return dashboardCors(request, dashboardResponse);
       }
     }
 
@@ -42,6 +43,6 @@ export default {
       }
     }
 
-    return cors(jsonError("Route not found", 404, "invalid_request_error", "not_found"));
+    return v1Cors(jsonError("Route not found", 404, "invalid_request_error", "not_found"));
   }
 } satisfies ExportedHandler<RuntimeEnv>;

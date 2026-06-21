@@ -1,16 +1,25 @@
 import { encryptJson, generateProxyApiKey, hashApiKey } from "../crypto";
 import type { RuntimeEnv } from "../env";
 import type { CodexTokenBundle } from "../types";
-import { hashPassword, verifyPassword } from "./password";
+import { hashPassword, PasswordPolicyError, validatePasswordPolicy, verifyPassword } from "./password";
 import type { DashboardUser } from "./session";
+
+const GENERIC_AUTH_ERROR = "Invalid email or password";
+const MAX_TOKEN_FIELD_LENGTH = 8192;
 
 export async function registerUser(
   env: RuntimeEnv,
   input: { email: string; password: string; displayName?: string | null }
 ): Promise<{ userId: string }> {
+  if (env.ENABLE_PUBLIC_REGISTER !== "true") {
+    throw new DashboardError(403, "Registration is disabled");
+  }
+
+  validatePasswordPolicy(input.password);
+
   const existing = await env.DB.prepare("SELECT id FROM users WHERE email = ? LIMIT 1").bind(input.email).first();
   if (existing) {
-    throw new DashboardError(409, "An account with this email already exists");
+    throw new DashboardError(401, GENERIC_AUTH_ERROR);
   }
 
   const { hash, salt } = await hashPassword(input.password);
@@ -26,30 +35,6 @@ export async function registerUser(
   return { userId };
 }
 
-export async function claimAccount(
-  env: RuntimeEnv,
-  input: { email: string; password: string }
-): Promise<{ userId: string }> {
-  const row = await env.DB.prepare("SELECT id, password_hash, status FROM users WHERE email = ? LIMIT 1")
-    .bind(input.email)
-    .first<{ id: string; password_hash: string | null; status: string }>();
-
-  if (!row || row.status !== "active") {
-    throw new DashboardError(404, "No active account found for this email");
-  }
-
-  if (row.password_hash) {
-    throw new DashboardError(409, "This account already has a password. Sign in instead.");
-  }
-
-  const { hash, salt } = await hashPassword(input.password);
-  await env.DB.prepare("UPDATE users SET password_hash = ?, password_salt = ? WHERE id = ?")
-    .bind(hash, salt, row.id)
-    .run();
-
-  return { userId: row.id };
-}
-
 export async function loginUser(
   env: RuntimeEnv,
   input: { email: string; password: string }
@@ -61,12 +46,12 @@ export async function loginUser(
     .first<{ id: string; password_hash: string | null; password_salt: string | null; status: string }>();
 
   if (!row || row.status !== "active" || !row.password_hash || !row.password_salt) {
-    throw new DashboardError(401, "Invalid email or password");
+    throw new DashboardError(401, GENERIC_AUTH_ERROR);
   }
 
   const valid = await verifyPassword(input.password, row.password_hash, row.password_salt);
   if (!valid) {
-    throw new DashboardError(401, "Invalid email or password");
+    throw new DashboardError(401, GENERIC_AUTH_ERROR);
   }
 
   return { userId: row.id };
@@ -138,6 +123,7 @@ export async function linkCodexAuth(
   user: DashboardUser,
   authJson: Record<string, unknown>
 ): Promise<void> {
+  validateCodexAuthJson(authJson);
   const bundle = normalizeTokenBundle(authJson);
   const encryptedBundle = await encryptJson(bundle, env.TOKEN_ENCRYPTION_KEY);
   const chatgptAccountId = extractAccountId(authJson, bundle);
@@ -198,6 +184,33 @@ export class DashboardError extends Error {
   }
 }
 
+export function validateCodexAuthJson(auth: Record<string, unknown>): void {
+  if (!isRecord(auth)) {
+    throw new DashboardError(400, "auth JSON must be an object");
+  }
+
+  const depth = maxObjectDepth(auth, 4);
+  if (depth > 4) {
+    throw new DashboardError(400, "auth JSON is too deeply nested");
+  }
+
+  const candidate = isRecord(auth.tokens) ? auth.tokens : isRecord(auth.token) ? auth.token : auth;
+  if (!isRecord(candidate)) {
+    throw new DashboardError(400, "auth JSON must include token fields");
+  }
+
+  const accessToken = getString(candidate.access_token) ?? getString(candidate.accessToken);
+  const refreshToken = getString(candidate.refresh_token) ?? getString(candidate.refreshToken);
+
+  if (!accessToken || !refreshToken) {
+    throw new DashboardError(400, "Could not find access_token and refresh_token in auth JSON");
+  }
+
+  if (accessToken.length > MAX_TOKEN_FIELD_LENGTH || refreshToken.length > MAX_TOKEN_FIELD_LENGTH) {
+    throw new DashboardError(400, "Token fields exceed maximum allowed length");
+  }
+}
+
 function normalizeTokenBundle(auth: Record<string, unknown>): CodexTokenBundle {
   const candidate = isRecord(auth.tokens) ? auth.tokens : isRecord(auth.token) ? auth.token : auth;
   const accessToken = getString(candidate.access_token) ?? getString(candidate.accessToken);
@@ -240,10 +253,22 @@ function normalizeExpiresAt(value: unknown): number | undefined {
   return undefined;
 }
 
+function maxObjectDepth(value: unknown, maxDepth: number, depth = 0): number {
+  if (!isRecord(value) || depth >= maxDepth) {
+    return depth;
+  }
+
+  let deepest = depth;
+  for (const child of Object.values(value)) {
+    deepest = Math.max(deepest, maxObjectDepth(child, maxDepth, depth + 1));
+  }
+  return deepest;
+}
+
 function getString(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

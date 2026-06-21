@@ -10,7 +10,7 @@ function LoginPage() {
   return (
     <AuthForm
       title="Sign in"
-      description="Manage your Codex proxy keys, link auth, and track savings."
+      description="Manage your proxy keys, link Codex auth, and track savings."
       submitLabel="Sign in"
       onSubmit={(email, password) => api.login(email, password).then(() => undefined)}
       footer={<AuthFooter />}

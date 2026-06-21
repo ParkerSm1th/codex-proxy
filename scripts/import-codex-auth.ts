@@ -59,7 +59,7 @@ if (options.dryRun) {
 
 await executeWranglerSql(options.database, sqlText, options.remote);
 
-console.log("Provisioned Codex proxy user.");
+console.log("Provisioned UseMySub user.");
 console.log(`Email: ${options.email}`);
 console.log(`Database: ${options.database} (${options.remote ? "remote" : "local"})`);
 console.log("Store this proxy API key now; only its hash was persisted:");

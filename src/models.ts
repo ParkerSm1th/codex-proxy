@@ -30,7 +30,7 @@ export function openAIModelsResponse(now = Math.floor(Date.now() / 1000)): unkno
       id: model.id,
       object: "model",
       created: now,
-      owned_by: "codex-proxy"
+      owned_by: "usemysub"
     }))
   };
 }

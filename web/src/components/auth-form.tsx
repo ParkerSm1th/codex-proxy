@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api, ApiError } from "@/lib/api";
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 
 interface AuthFormProps {
   title: string;
@@ -30,14 +31,14 @@ export function AuthForm({ title, description, submitLabel, onSubmit, showDispla
           <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Command className="size-4" />
           </div>
-          Codex Proxy
+          {BRAND_NAME}
         </div>
         <div className="space-y-2">
           <blockquote className="text-lg leading-relaxed">
-            Route Cursor through your Codex subscription, track every request, and see how much you save versus API list pricing.
+            {BRAND_TAGLINE} Track every request and see how much you save versus API list pricing.
           </blockquote>
         </div>
-        <p className="text-sm text-muted-foreground">Self-hosted OpenAI-compatible proxy for Codex OAuth users.</p>
+        <p className="text-sm text-muted-foreground">OpenAI-compatible proxy for Codex subscription users.</p>
       </div>
 
       <div className="flex items-center justify-center p-6 md:p-10">

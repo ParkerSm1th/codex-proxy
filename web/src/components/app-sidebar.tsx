@@ -32,6 +32,7 @@ import {
   SidebarMenuItem
 } from "@/components/ui/sidebar";
 import { api, type DashboardUser } from "@/lib/api";
+import { BRAND_NAME } from "@/lib/brand";
 
 const mainNav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true },
@@ -55,8 +56,8 @@ export function AppSidebar({ user }: { user: DashboardUser }) {
                   <Command className="size-4" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">Codex Proxy</span>
-                  <span className="truncate text-xs text-sidebar-foreground/70">Dashboard</span>
+                  <span className="truncate font-semibold">{BRAND_NAME}</span>
+                  <span className="truncate text-xs text-sidebar-foreground/70">usemysub.com</span>
                 </div>
               </Link>
             </SidebarMenuButton>

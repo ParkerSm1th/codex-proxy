@@ -1,6 +1,6 @@
-# Codex Proxy
+# UseMySub
 
-Cloudflare Worker that exposes a Cursor/OpenAI-compatible `/v1` API while forwarding to the ChatGPT Codex Responses backend with each user's own Codex OAuth credentials.
+[usemysub.com](https://usemysub.com) — Cloudflare Worker that exposes a Cursor/OpenAI-compatible `/v1` API while forwarding to the ChatGPT Codex Responses backend with each user's own Codex OAuth credentials.
 
 ## Prior-Art Decision
 
@@ -73,7 +73,7 @@ Sign in at `/login` with the email and `--password` set during provisioning.
 
 Configure Cursor's OpenAI-compatible provider:
 
-- Base URL: `https://<your-worker-host>/v1`
+- Base URL: `https://usemysub.com/v1`
 - API key: the generated `cpk_...` proxy key
 - Model: one of `/v1/models`, for example `gpt-5.5` or `gpt-5.5-codex`
 
@@ -89,17 +89,21 @@ npx wrangler dev
 The real-account smoke test is disabled by default:
 
 ```bash
-RUN_CODEX_SMOKE=1 CODEX_PROXY_BASE_URL="https://<host>" CODEX_PROXY_API_KEY="cpk_..." npm test
+RUN_CODEX_SMOKE=1 CODEX_PROXY_BASE_URL="https://usemysub.com" CODEX_PROXY_API_KEY="cpk_..." npm test
 ```
 
 ## Deployment Notes
+
+Production is served at **https://usemysub.com** (HTTPS via Cloudflare Universal SSL on the custom domain routes in `wrangler.jsonc`).
 
 Apply migrations remotely before first production use:
 
 ```bash
 npx wrangler d1 migrations apply codex-proxy-db --remote
-npx wrangler deploy
+npm run deploy
 ```
+
+The domain must be on your Cloudflare account. Wrangler attaches `usemysub.com` and `www.usemysub.com` as custom domains and provisions DNS + TLS automatically on deploy.
 
 Before team rollout, verify that proxying subscription-backed Codex access for this use case is allowed by the relevant OpenAI/Codex terms. Do not share one user's subscription credentials across the team; each proxy key should map to that user's own Codex account.
 

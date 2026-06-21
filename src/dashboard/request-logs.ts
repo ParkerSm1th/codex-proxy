@@ -11,6 +11,8 @@ export interface RequestLogInput {
   inputTokens?: number | null;
   outputTokens?: number | null;
   upstreamMode?: string | null;
+  reasoningEffort?: string | null;
+  serviceTier?: string | null;
   errorMessage?: string | null;
 }
 
@@ -20,8 +22,8 @@ export async function persistRequestLog(env: RuntimeEnv, input: RequestLogInput)
   await env.DB.prepare(
     `INSERT INTO request_logs (
       id, user_id, api_key_id, request_id, route, model, status, duration_ms,
-      input_tokens, output_tokens, estimated_savings_usd, upstream_mode, error_message
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      input_tokens, output_tokens, estimated_savings_usd, upstream_mode, reasoning_effort, service_tier, error_message
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(
       crypto.randomUUID(),
@@ -36,6 +38,8 @@ export async function persistRequestLog(env: RuntimeEnv, input: RequestLogInput)
       input.outputTokens ?? null,
       estimatedSavings,
       input.upstreamMode ?? null,
+      input.reasoningEffort ?? null,
+      input.serviceTier ?? null,
       input.errorMessage ?? null
     )
     .run();
@@ -120,13 +124,15 @@ export async function listRequestLogs(
     outputTokens: number | null;
     estimatedSavingsUsd: number | null;
     upstreamMode: string | null;
+    reasoningEffort: string | null;
+    serviceTier: string | null;
     errorMessage: string | null;
     createdAt: string;
   }>
 > {
   const result = await env.DB.prepare(
     `SELECT id, request_id, route, model, status, duration_ms, input_tokens, output_tokens,
-            estimated_savings_usd, upstream_mode, error_message, created_at
+            estimated_savings_usd, upstream_mode, reasoning_effort, service_tier, error_message, created_at
        FROM request_logs
       WHERE user_id = ?
       ORDER BY created_at DESC
@@ -144,6 +150,8 @@ export async function listRequestLogs(
       output_tokens: number | null;
       estimated_savings_usd: number | null;
       upstream_mode: string | null;
+      reasoning_effort: string | null;
+      service_tier: string | null;
       error_message: string | null;
       created_at: string;
     }>();
@@ -159,6 +167,8 @@ export async function listRequestLogs(
     outputTokens: row.output_tokens,
     estimatedSavingsUsd: row.estimated_savings_usd,
     upstreamMode: row.upstream_mode,
+    reasoningEffort: row.reasoning_effort,
+    serviceTier: row.service_tier,
     errorMessage: row.error_message,
     createdAt: row.created_at
   }));

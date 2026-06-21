@@ -10,6 +10,8 @@ export interface ProxyRequestLogContext {
   model?: string | null;
   startedAt: number;
   upstreamMode?: string | null;
+  reasoningEffort?: string | null;
+  serviceTier?: string | null;
 }
 
 export function scheduleProxyRequestLog(
@@ -31,6 +33,8 @@ export function scheduleProxyRequestLog(
       inputTokens: usage?.input_tokens ?? null,
       outputTokens: usage?.output_tokens ?? null,
       upstreamMode: context.upstreamMode ?? null,
+      reasoningEffort: context.reasoningEffort ?? null,
+      serviceTier: context.serviceTier ?? null,
       errorMessage: errorMessage ?? null
     })
   );

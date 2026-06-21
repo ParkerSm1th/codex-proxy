@@ -43,8 +43,9 @@ function RequestTable({ rows }: { rows: RequestLogEntry[] }) {
           <TableRow>
             <TableHead>Time</TableHead>
             <TableHead>Request ID</TableHead>
-            <TableHead>Route</TableHead>
             <TableHead>Model</TableHead>
+            <TableHead>Reasoning</TableHead>
+            <TableHead>Service Tier</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Tokens</TableHead>
             <TableHead className="text-right">Saved</TableHead>
@@ -53,7 +54,7 @@ function RequestTable({ rows }: { rows: RequestLogEntry[] }) {
         <TableBody>
           {rows.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+              <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                 No requests logged yet.
               </TableCell>
             </TableRow>
@@ -64,8 +65,9 @@ function RequestTable({ rows }: { rows: RequestLogEntry[] }) {
                 <TableCell>
                   <CopyRequestIdButton requestId={entry.requestId} />
                 </TableCell>
-                <TableCell>{entry.route}</TableCell>
                 <TableCell>{entry.model ?? "—"}</TableCell>
+                <TableCell>{entry.reasoningEffort ? <Badge variant="secondary">{entry.reasoningEffort}</Badge> : "—"}</TableCell>
+                <TableCell>{entry.serviceTier ? <Badge variant="outline">{entry.serviceTier}</Badge> : "—"}</TableCell>
                 <TableCell>
                   <Badge variant={entry.status >= 200 && entry.status < 300 ? "success" : "danger"}>{entry.status}</Badge>
                 </TableCell>

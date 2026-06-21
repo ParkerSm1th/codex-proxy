@@ -54,6 +54,10 @@ export function normalizeCursorResponsesBody(body: Record<string, unknown>): Rec
     normalized.reasoning = { effort: model.reasoningEffort };
   }
 
+  if (typeof body.service_tier === "string") {
+    normalized.service_tier = body.service_tier;
+  }
+
   return normalized;
 }
 

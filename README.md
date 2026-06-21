@@ -65,7 +65,9 @@ TOKEN_ENCRYPTION_KEY="..." API_KEY_PEPPER="..." \
 
 Add `--remote` to write to the deployed D1 database. The script prints the proxy API key once; only its HMAC hash is stored.
 
-Users can also sign up at `/login` with any email — a magic link creates the account on first sign-in. Linking Codex tokens still requires the provision script or pasting auth JSON in the dashboard.
+Users can also sign up at `/login` with any email — a magic link creates the account on first sign-in. After sign-in, `/onboarding` walks through ChatGPT OAuth: open the sign-in link, then paste the `http://localhost:1455/auth/callback?...` redirect URL from your browser.
+
+The CLI provision script remains available for admins who prefer importing `~/.codex/auth.json` directly.
 
 ## Dashboard Access
 

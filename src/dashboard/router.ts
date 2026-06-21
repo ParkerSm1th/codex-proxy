@@ -1,5 +1,6 @@
 import type { RuntimeEnv } from "../env";
 import { clientIp, checkRateLimit, rateLimitResponse } from "../rate-limit";
+import { completeCodexOAuth, startCodexOAuth } from "./codex-oauth";
 import { requestMagicLink, verifyMagicLink } from "./magic-link";
 import {
   createApiKey,
@@ -61,8 +62,10 @@ export async function handleDashboardRequest(
         const { userId } = await verifyMagicLink(env, token);
         await invalidateUserSessions(env, userId);
         const sessionToken = await issueSession(env, userId);
+        const codex = await getCodexStatus(env, userId);
+        const destination = codex.linked ? "/dashboard" : "/onboarding";
 
-        return authRedirectResponse(request, "/dashboard", sessionCookie(sessionToken, request));
+        return authRedirectResponse(request, destination, sessionCookie(sessionToken, request));
       } catch (error) {
         if (error instanceof DashboardError) {
           return redirectWithError(request, error.message);
@@ -118,6 +121,21 @@ export async function handleDashboardRequest(
 
     if (url.pathname === "/api/codex/status" && request.method === "GET") {
       const user = await requireUser(env, request);
+      return dashboardJson({ codex: await getCodexStatus(env, user.id) });
+    }
+
+    if (url.pathname === "/api/codex/oauth/start" && request.method === "POST") {
+      const user = await requireUser(env, request);
+      return dashboardJson(await startCodexOAuth(env, user.id));
+    }
+
+    if (url.pathname === "/api/codex/oauth/complete" && request.method === "POST") {
+      const user = await requireUser(env, request);
+      const body = (await request.json()) as { callbackUrl?: string };
+      if (!body.callbackUrl?.trim()) {
+        return dashboardJson({ error: "callbackUrl is required" }, 400);
+      }
+      await completeCodexOAuth(env, user, body.callbackUrl);
       return dashboardJson({ codex: await getCodexStatus(env, user.id) });
     }
 

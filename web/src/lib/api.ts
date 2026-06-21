@@ -91,6 +91,13 @@ export const api = {
     }),
   revokeKey: (id: string) => request<{ ok: boolean }>(`/api/keys/${encodeURIComponent(id)}`, { method: "DELETE" }),
   codexStatus: () => request<{ codex: CodexStatus }>("/api/codex/status"),
+  startCodexOAuth: () =>
+    request<{ authUrl: string; redirectUri: string }>("/api/codex/oauth/start", { method: "POST" }),
+  completeCodexOAuth: (callbackUrl: string) =>
+    request<{ codex: CodexStatus }>("/api/codex/oauth/complete", {
+      method: "POST",
+      body: JSON.stringify({ callbackUrl })
+    }),
   linkCodex: (auth: Record<string, unknown>) =>
     request<{ codex: CodexStatus }>("/api/codex/link", {
       method: "POST",

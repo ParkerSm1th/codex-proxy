@@ -1,11 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/input";
-import { api, ApiError } from "@/lib/api";
+import { CodexLinkFlow } from "@/components/codex-link-flow";
+import { api } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 
 export const Route = createFileRoute("/dashboard/codex")({
@@ -16,9 +14,6 @@ export const Route = createFileRoute("/dashboard/codex")({
 function CodexPage() {
   const initial = Route.useLoaderData();
   const [codex, setCodex] = useState(initial.codex);
-  const [authJson, setAuthJson] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
   return (
     <div className="space-y-6 px-4 lg:px-6">
@@ -46,47 +41,19 @@ function CodexPage() {
               </p>
             </>
           ) : (
-            <p className="text-muted-foreground">Paste your Codex auth JSON below to link tokens.</p>
+            <p className="text-muted-foreground">Connect your Codex subscription below to start using the proxy.</p>
           )}
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Link Codex auth</CardTitle>
-          <CardDescription>Paste the contents of your Codex auth file (usually ~/.codex/auth.json).</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="authJson">Auth JSON</Label>
-            <Textarea
-              id="authJson"
-              value={authJson}
-              onChange={(event) => setAuthJson(event.target.value)}
-              placeholder='{"tokens":{"access_token":"...","refresh_token":"..."}}'
-            />
-          </div>
-          {error ? <p className="text-sm text-red-300">{error}</p> : null}
-          {success ? <p className="text-sm text-emerald-300">{success}</p> : null}
-          <Button
-            onClick={async () => {
-              setError(null);
-              setSuccess(null);
-              try {
-                const auth = JSON.parse(authJson) as Record<string, unknown>;
-                const { codex: next } = await api.linkCodex(auth);
-                setCodex(next);
-                setAuthJson("");
-                setSuccess("Codex auth linked successfully.");
-              } catch (linkError) {
-                setError(linkError instanceof ApiError ? linkError.message : "Invalid JSON or auth payload");
-              }
-            }}
-          >
-            Save auth
-          </Button>
-        </CardContent>
-      </Card>
+      <CodexLinkFlow
+        title={codex.linked ? "Reconnect Codex" : "Connect Codex"}
+        description="Sign in with ChatGPT, then paste the localhost redirect URL from your browser."
+        onLinked={async () => {
+          const { codex: next } = await api.codexStatus();
+          setCodex(next);
+        }}
+      />
     </div>
   );
 }

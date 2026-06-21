@@ -1,7 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   Activity,
-  Command,
   KeyRound,
   LayoutDashboard,
   Link2,
@@ -30,6 +29,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem
 } from "@/components/ui/sidebar";
+import { BrandMark } from "@/components/brand-mark";
 import { api, type DashboardUser } from "@/lib/api";
 import { BRAND_NAME } from "@/lib/brand";
 
@@ -51,8 +51,8 @@ export function AppSidebar({ user }: { user: DashboardUser }) {
           <SidebarMenuItem>
             <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:!p-1.5">
               <Link to="/dashboard">
-                <div className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                  <Command className="size-4" />
+                <div className="flex size-8 overflow-hidden rounded-lg">
+                  <BrandMark />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">{BRAND_NAME}</span>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Command } from "lucide-react";
+import { BrandMark } from "@/components/brand-mark";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -26,8 +26,8 @@ export function AuthForm({ title, description, submitLabel, onSubmit, footer, in
     <div className="grid min-h-screen lg:grid-cols-2">
       <div className="relative hidden flex-col justify-between bg-muted/40 p-10 lg:flex">
         <div className="flex items-center gap-2 text-lg font-semibold">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Command className="size-4" />
+          <div className="flex size-8 overflow-hidden rounded-lg">
+            <BrandMark />
           </div>
           {BRAND_NAME}
         </div>

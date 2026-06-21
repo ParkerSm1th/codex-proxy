@@ -1,5 +1,5 @@
 import { createFileRoute, isRedirect, redirect } from "@tanstack/react-router";
-import { Command } from "lucide-react";
+import { BrandMark } from "@/components/brand-mark";
 import { CodexLinkFlow } from "@/components/codex-link-flow";
 import { api } from "@/lib/api";
 import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
@@ -27,8 +27,8 @@ function OnboardingPage() {
     <div className="grid min-h-screen lg:grid-cols-2">
       <div className="relative hidden flex-col justify-between bg-muted/40 p-10 lg:flex">
         <div className="flex items-center gap-2 text-lg font-semibold">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Command className="size-4" />
+          <div className="flex size-8 overflow-hidden rounded-lg">
+            <BrandMark />
           </div>
           {BRAND_NAME}
         </div>

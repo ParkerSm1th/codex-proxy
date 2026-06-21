@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none">
+  <rect width="1200" height="630" fill="#0A0A0B" />
+  <rect x="120" y="165" width="300" height="300" rx="68" fill="#1C1C1F" stroke="#3A3A42" stroke-width="4" />
+  <circle cx="242" cy="345" r="16" fill="#FFFFFF" />
+  <path
+    d="M170 405C245 315 275 285 242 345C209 405 335 195 430 175"
+    stroke="#2DD4BF"
+    stroke-width="20"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path d="M390 155L450 175L430 235" stroke="#2DD4BF" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" />
+  <text x="470" y="280" fill="#FAFAFA" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="88" font-weight="700">
+    UseMySub
+  </text>
+  <text x="470" y="360" fill="#A1A1AA" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="34" font-weight="400">
+    Route OpenAI-compatible clients through your Codex subscription.
+  </text>
+  <text x="470" y="420" fill="#71717A" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="28" font-weight="400">
+    usemysub.com
+  </text>
+</svg>

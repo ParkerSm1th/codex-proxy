@@ -48,7 +48,10 @@ export async function handleDashboardRequest(
       return dashboardJson(result);
     }
 
-    if (url.pathname === "/api/auth/verify" && request.method === "GET") {
+    if (
+      url.pathname === "/api/auth/verify" &&
+      (request.method === "GET" || request.method === "HEAD")
+    ) {
       const token = url.searchParams.get("token");
       if (!token) {
         return redirectWithError(request, "Missing sign-in token");
@@ -59,14 +62,7 @@ export async function handleDashboardRequest(
         await invalidateUserSessions(env, userId);
         const sessionToken = await issueSession(env, userId);
 
-        return new Response(null, {
-          status: 302,
-          headers: {
-            Location: "/dashboard",
-            "Set-Cookie": sessionCookie(sessionToken, request),
-            "Cache-Control": "no-store"
-          }
-        });
+        return authRedirectResponse(request, "/dashboard", sessionCookie(sessionToken, request));
       } catch (error) {
         if (error instanceof DashboardError) {
           return redirectWithError(request, error.message);
@@ -174,10 +170,22 @@ async function requireUser(env: RuntimeEnv, request: Request) {
 function redirectWithError(request: Request, message: string): Response {
   const loginUrl = new URL("/login", request.url);
   loginUrl.searchParams.set("error", message);
-  return new Response(null, {
-    status: 302,
-    headers: { Location: `${loginUrl.pathname}${loginUrl.search}` }
+  return authRedirectResponse(request, `${loginUrl.pathname}${loginUrl.search}`);
+}
+
+function authRedirectResponse(
+  request: Request,
+  location: string,
+  setCookie?: string
+): Response {
+  const headers = new Headers({
+    Location: location,
+    "Cache-Control": "no-store, no-cache, must-revalidate, private"
   });
+  if (setCookie) {
+    headers.set("Set-Cookie", setCookie);
+  }
+  return new Response(null, { status: 302, headers });
 }
 
 function parseLimitParam(value: string | null, defaultLimit = 50, maxLimit = 200): number {

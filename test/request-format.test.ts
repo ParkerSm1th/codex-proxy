@@ -47,7 +47,8 @@ describe("request format detection", () => {
         { type: "function", name: "Shell", parameters: { type: "object" } },
         { type: "custom", name: "ApplyPatch" }
       ],
-      reasoning: { effort: "high", summary: "auto" }
+      reasoning: { effort: "high", summary: "auto" },
+      service_tier: "priority"
     });
 
     expect(body).toMatchObject({
@@ -55,7 +56,8 @@ describe("request format detection", () => {
       instructions: "Be helpful.",
       stream: true,
       store: false,
-      reasoning: { effort: "high", summary: "auto" }
+      reasoning: { effort: "high", summary: "auto" },
+      service_tier: "priority"
     });
     expect(body.tools).toEqual([{ type: "function", name: "Shell", parameters: { type: "object" } }]);
     expect(body).not.toHaveProperty("include");

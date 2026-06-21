@@ -35,7 +35,8 @@ describe("OpenAI/Codex transforms", () => {
           }
         }
       ],
-      tool_choice: "auto"
+      tool_choice: "auto",
+      service_tier: "priority"
     });
 
     expect(body).toMatchObject({
@@ -43,7 +44,8 @@ describe("OpenAI/Codex transforms", () => {
       instructions: "Be precise.",
       stream: true,
       store: false,
-      reasoning: { effort: "high" }
+      reasoning: { effort: "high" },
+      service_tier: "priority"
     });
     expect(body.input).toEqual([
       { type: "message", role: "user", content: [{ type: "input_text", text: "Hello" }] }

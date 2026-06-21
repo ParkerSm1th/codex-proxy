@@ -97,10 +97,17 @@ async function handleChatCompletions(
   };
 
   const finishLog = (status: number, usage?: TokenUsage | null, errorMessage?: string | null) => {
-    scheduleProxyRequestLog(ctx, { ...logContext, startedAt, model: modelId ?? null }, status, usage, errorMessage);
+    scheduleProxyRequestLog(
+      ctx,
+      { ...logContext, startedAt, model: modelId ?? null, ...requestLogOptions },
+      status,
+      usage,
+      errorMessage
+    );
   };
 
   let modelId: string;
+  let requestLogOptions: RequestLogOptions = {};
   const rawBody = (await request.json()) as Record<string, unknown>;
   log.info("request_body_summary", summarizeRequestBody(rawBody));
 
@@ -130,6 +137,8 @@ async function handleChatCompletions(
     stream = chatRequest.stream !== false;
     upstreamBody = chatCompletionsToResponsesRequest(chatRequest);
   }
+
+  requestLogOptions = requestLogOptionsFromBody(upstreamBody);
 
   const upstream = await fetchCodexResponses(env, user, upstreamBody, {
     ...codexOptions(rawBody, request),
@@ -171,6 +180,34 @@ async function handleChatCompletions(
   );
 }
 
+interface RequestLogOptions {
+  reasoningEffort?: string | null;
+  serviceTier?: string | null;
+}
+
+function requestLogOptionsFromBody(body: unknown): RequestLogOptions {
+  if (!isRecord(body)) {
+    return {};
+  }
+
+  return {
+    reasoningEffort: reasoningEffortFromBody(body),
+    serviceTier: typeof body.service_tier === "string" ? body.service_tier : null
+  };
+}
+
+function reasoningEffortFromBody(body: Record<string, unknown>): string | null {
+  if (isRecord(body.reasoning) && typeof body.reasoning.effort === "string") {
+    return body.reasoning.effort;
+  }
+
+  if (typeof body.reasoning === "string") {
+    return body.reasoning;
+  }
+
+  return null;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -193,6 +230,7 @@ async function handleResponsesPassthrough(
   const upstreamBody = isResponsesShapedChatRequest(body)
     ? normalizeCursorResponsesBody(body)
     : ensureResponsesInstructions({ ...body, store: false });
+  const requestLogOptions = requestLogOptionsFromBody(upstreamBody);
   const upstream = await fetchCodexResponses(env, user, upstreamBody, {
     ...codexOptions(body, request),
     requestId: log.context.requestId
@@ -216,7 +254,8 @@ async function handleResponsesPassthrough(
         route: "responses",
         model,
         startedAt,
-        upstreamMode
+        upstreamMode,
+        ...requestLogOptions
       },
       errorResponse.status,
       null,
@@ -235,7 +274,8 @@ async function handleResponsesPassthrough(
       route: "responses",
       model,
       startedAt,
-      upstreamMode
+      upstreamMode,
+      ...requestLogOptions
     },
     upstream.status
   );

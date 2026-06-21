@@ -50,6 +50,7 @@ export interface ChatCompletionRequest {
   tool_choice?: unknown;
   parallel_tool_calls?: boolean;
   reasoning?: unknown;
+  service_tier?: string;
   temperature?: number;
   top_p?: number;
   max_tokens?: number;

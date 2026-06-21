@@ -12,6 +12,7 @@ interface ResponsesRequest {
   tool_choice?: unknown;
   parallel_tool_calls?: boolean;
   reasoning?: unknown;
+  service_tier?: string;
 }
 
 interface ResponsesSseEvent {
@@ -55,6 +56,10 @@ export function chatCompletionsToResponsesRequest(request: ChatCompletionRequest
     body.reasoning = request.reasoning;
   } else if (model.reasoningEffort) {
     body.reasoning = { effort: model.reasoningEffort };
+  }
+
+  if (typeof request.service_tier === "string") {
+    body.service_tier = request.service_tier;
   }
 
   return body;

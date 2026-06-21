@@ -41,7 +41,8 @@ describe("Worker routes", () => {
       expect(JSON.parse(String(init?.body))).toMatchObject({
         model: "gpt-5.5",
         stream: true,
-        store: false
+        store: false,
+        service_tier: "priority"
       });
 
       return new Response(
@@ -68,7 +69,8 @@ describe("Worker routes", () => {
         },
         body: JSON.stringify({
           model: "gpt-5.5",
-          messages: [{ role: "user", content: "Say hello" }]
+          messages: [{ role: "user", content: "Say hello" }],
+          service_tier: "priority"
         })
       }),
       env,
@@ -91,7 +93,8 @@ describe("Worker routes", () => {
         model: "gpt-5.5",
         stream: true,
         store: false,
-        input: [{ type: "message", role: "user", content: [{ type: "input_text", text: "hi" }] }]
+        input: [{ type: "message", role: "user", content: [{ type: "input_text", text: "hi" }] }],
+        service_tier: "priority"
       });
 
       return new Response(
@@ -120,7 +123,8 @@ describe("Worker routes", () => {
           model: "gpt-5.5",
           input: [{ type: "message", role: "user", content: [{ type: "input_text", text: "hi" }] }],
           stream: true,
-          include: ["reasoning.encrypted_content"]
+          include: ["reasoning.encrypted_content"],
+          service_tier: "priority"
         })
       }),
       env,

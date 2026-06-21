@@ -34,6 +34,8 @@ export interface RequestLogEntry {
   outputTokens: number | null;
   estimatedSavingsUsd: number | null;
   upstreamMode: string | null;
+  reasoningEffort: string | null;
+  serviceTier: string | null;
   errorMessage: string | null;
   createdAt: string;
 }

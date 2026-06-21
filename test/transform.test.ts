@@ -6,6 +6,18 @@ import {
 } from "../src/transform";
 
 describe("OpenAI/Codex transforms", () => {
+  it("maps gpt-5.5-extra to upstream gpt-5.5 with xhigh reasoning", () => {
+    const body = chatCompletionsToResponsesRequest({
+      model: "gpt-5.5-extra",
+      messages: [{ role: "user", content: "Hello" }]
+    });
+
+    expect(body).toMatchObject({
+      model: "gpt-5.5",
+      reasoning: { effort: "xhigh" }
+    });
+  });
+
   it("converts chat completions bodies into Codex Responses bodies", () => {
     const body = chatCompletionsToResponsesRequest({
       model: "gpt-5.5-high",

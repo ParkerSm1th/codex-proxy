@@ -3,7 +3,12 @@
 API_KEY_PEPPER="replace-with-random-32-byte-secret"
 TOKEN_ENCRYPTION_KEY="replace-with-32-byte-base64url-or-64-char-hex-key"
 
+# Magic-link sign-in (local dev: return link in API response instead of sending email)
+DEV_RETURN_MAGIC_LINK="true"
+PUBLIC_APP_ORIGIN="http://localhost:8787"
+
 # Optional:
 # UPSTREAM_RELAY_TOKEN="random-relay-secret"
 # ENABLE_EXTERNAL_RELAY="true"
-# ENABLE_PUBLIC_REGISTER="true"
+# RESEND_API_KEY="re_..."
+# AUTH_FROM_EMAIL="UseMySub <auth@usemysub.com>"

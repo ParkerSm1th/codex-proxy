@@ -1,19 +1,15 @@
-import { jsonError } from "../auth";
-import { dashboardCors } from "../cors";
 import type { RuntimeEnv } from "../env";
 import { clientIp, checkRateLimit, rateLimitResponse } from "../rate-limit";
+import { requestMagicLink, verifyMagicLink } from "./magic-link";
 import {
   createApiKey,
   DashboardError,
   getCodexStatus,
   linkCodexAuth,
   listApiKeys,
-  loginUser,
-  registerUser,
   revokeApiKey
 } from "./service";
 import { getSavingsSummary, listRequestLogs } from "./request-logs";
-import { PasswordPolicyError } from "./password";
 import {
   clearSessionCookie,
   createSession as issueSession,
@@ -22,8 +18,8 @@ import {
   sessionCookie
 } from "./session";
 
-const LOGIN_LIMIT = 10;
-const LOGIN_WINDOW_MS = 60_000;
+const MAGIC_LINK_LIMIT = 5;
+const MAGIC_LINK_WINDOW_MS = 60_000;
 
 export async function handleDashboardRequest(
   request: Request,
@@ -36,45 +32,47 @@ export async function handleDashboardRequest(
   }
 
   try {
-    if (url.pathname === "/api/auth/register" && request.method === "POST") {
-      const body = (await request.json()) as { email?: string; password?: string; displayName?: string };
-      if (!body.email || !body.password) {
-        return dashboardJson({ error: "Email and password are required" }, 400);
-      }
-
-      const { userId } = await registerUser(env, {
-        email: body.email.trim().toLowerCase(),
-        password: body.password,
-        displayName: body.displayName ?? null
-      });
-      await invalidateUserSessions(env, userId);
-      const token = await issueSession(env, userId);
-      return dashboardJson({ user: await getSessionUser(env, withSession(request, token)) }, 201, {
-        "Set-Cookie": sessionCookie(token, request)
-      });
-    }
-
-    if (url.pathname === "/api/auth/login" && request.method === "POST") {
-      const rateKey = `login:${clientIp(request)}`;
-      const rate = checkRateLimit(rateKey, LOGIN_LIMIT, LOGIN_WINDOW_MS);
+    if (url.pathname === "/api/auth/magic-link" && request.method === "POST") {
+      const rateKey = `magic-link:${clientIp(request)}`;
+      const rate = checkRateLimit(rateKey, MAGIC_LINK_LIMIT, MAGIC_LINK_WINDOW_MS);
       if (!rate.allowed) {
         return rateLimitResponse(rate.retryAfterSeconds ?? 60);
       }
 
-      const body = (await request.json()) as { email?: string; password?: string };
-      if (!body.email || !body.password) {
-        return dashboardJson({ error: "Email and password are required" }, 400);
+      const body = (await request.json()) as { email?: string };
+      if (!body.email) {
+        return dashboardJson({ error: "Email is required" }, 400);
       }
 
-      const { userId } = await loginUser(env, {
-        email: body.email.trim().toLowerCase(),
-        password: body.password
-      });
-      await invalidateUserSessions(env, userId);
-      const token = await issueSession(env, userId);
-      return dashboardJson({ user: await getSessionUser(env, withSession(request, token)) }, 200, {
-        "Set-Cookie": sessionCookie(token, request)
-      });
+      const result = await requestMagicLink(env, request, body.email);
+      return dashboardJson(result);
+    }
+
+    if (url.pathname === "/api/auth/verify" && request.method === "GET") {
+      const token = url.searchParams.get("token");
+      if (!token) {
+        return redirectWithError(request, "Missing sign-in token");
+      }
+
+      try {
+        const { userId } = await verifyMagicLink(env, token);
+        await invalidateUserSessions(env, userId);
+        const sessionToken = await issueSession(env, userId);
+
+        return new Response(null, {
+          status: 302,
+          headers: {
+            Location: "/dashboard",
+            "Set-Cookie": sessionCookie(sessionToken, request),
+            "Cache-Control": "no-store"
+          }
+        });
+      } catch (error) {
+        if (error instanceof DashboardError) {
+          return redirectWithError(request, error.message);
+        }
+        throw error;
+      }
     }
 
     if (url.pathname === "/api/auth/logout" && request.method === "POST") {
@@ -154,10 +152,6 @@ export async function handleDashboardRequest(
       return dashboardJson({ error: error.message }, error.status);
     }
 
-    if (error instanceof PasswordPolicyError) {
-      return dashboardJson({ error: error.message }, 400);
-    }
-
     console.error(
       JSON.stringify({
         level: "error",
@@ -177,10 +171,13 @@ async function requireUser(env: RuntimeEnv, request: Request) {
   return user;
 }
 
-function withSession(request: Request, token: string): Request {
-  const headers = new Headers(request.headers);
-  headers.set("cookie", `${headers.get("cookie") ?? ""}; codex_session=${encodeURIComponent(token)}`);
-  return new Request(request.url, { headers, method: request.method });
+function redirectWithError(request: Request, message: string): Response {
+  const loginUrl = new URL("/login", request.url);
+  loginUrl.searchParams.set("error", message);
+  return new Response(null, {
+    status: 302,
+    headers: { Location: `${loginUrl.pathname}${loginUrl.search}` }
+  });
 }
 
 function parseLimitParam(value: string | null, defaultLimit = 50, maxLimit = 200): number {

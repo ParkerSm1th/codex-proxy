@@ -1,6 +1,6 @@
 # UseMySub
 
-[usemysub.com](https://usemysub.com) — Cloudflare Worker that exposes a Cursor/OpenAI-compatible `/v1` API while forwarding to the ChatGPT Codex Responses backend with each user's own Codex OAuth credentials.
+[usemysub.com](https://usemysub.com) — OpenAI-compatible proxy that routes requests through your Codex subscription credentials.
 
 ## Prior-Art Decision
 
@@ -46,36 +46,40 @@ Optional secrets and vars:
 
 - `UPSTREAM_RELAY_TOKEN` — shared secret for the upstream relay (`X-Relay-Token` header). Set on both the Worker and relay container.
 - `ENABLE_EXTERNAL_RELAY=true` — required to use `CODEX_RELAY_URL` (external relay hosts must end in `.workers.dev` or `.fly.dev`).
-- `ENABLE_PUBLIC_REGISTER=true` — enables self-service registration (disabled by default).
+- `RESEND_API_KEY` — Resend API key for magic-link sign-in emails (production).
+- `AUTH_FROM_EMAIL` — verified sender, e.g. `UseMySub <auth@usemysub.com>`.
+- `PUBLIC_APP_ORIGIN` — base URL for links in emails (defaults to `https://usemysub.com` in production).
+- `DEV_RETURN_MAGIC_LINK=true` — local dev only: return the sign-in URL in the API response instead of sending email.
 
-## Provision A User
+## Provision A User (Codex tokens)
 
-Each teammate must authenticate their own Codex CLI first so they have a local Codex auth file. Then import that file into D1 and set a dashboard password:
+Each teammate must authenticate their own Codex CLI first so they have a local Codex auth file. Then import that file into D1:
 
 ```bash
 TOKEN_ENCRYPTION_KEY="..." API_KEY_PEPPER="..." \
   npm run provision -- \
   --email teammate@example.com \
-  --password "your-dashboard-password" \
   --display-name "Teammate" \
   --auth-file ~/.codex/auth.json
 ```
 
 Add `--remote` to write to the deployed D1 database. The script prints the proxy API key once; only its HMAC hash is stored.
 
-Public self-registration and the claim-password flow are disabled by default. Users are created only via this provision script (or by enabling `ENABLE_PUBLIC_REGISTER`).
+Users can also sign up at `/login` with any email — a magic link creates the account on first sign-in. Linking Codex tokens still requires the provision script or pasting auth JSON in the dashboard.
 
 ## Dashboard Access
 
-Sign in at `/login` with the email and `--password` set during provisioning.
+Sign in at `/login` with your email. UseMySub sends a one-time magic link (15 minute expiry). New accounts are created automatically on first sign-in.
 
-## Cursor Configuration
+## Client setup
 
-Configure Cursor's OpenAI-compatible provider:
+Point any OpenAI-compatible client at:
 
 - Base URL: `https://usemysub.com/v1`
-- API key: the generated `cpk_...` proxy key
-- Model: one of `/v1/models`, for example `gpt-5.5` or `gpt-5.5-codex`
+- API key: a generated `cpk_...` proxy key from the dashboard
+- Model: one listed by `/v1/models`, for example `gpt-5.5` or `gpt-5.5-codex`
+
+Codex is the only supported backend for now.
 
 ## Development
 

@@ -2,7 +2,6 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import {
   Activity,
   Command,
-  HelpCircle,
   KeyRound,
   LayoutDashboard,
   Link2,
@@ -90,22 +89,6 @@ export function AppSidebar({ user }: { user: DashboardUser }) {
                   </SidebarMenuItem>
                 );
               })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Resources</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <a href="https://cursor.com/docs" target="_blank" rel="noreferrer">
-                    <HelpCircle />
-                    <span>Cursor docs</span>
-                  </a>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

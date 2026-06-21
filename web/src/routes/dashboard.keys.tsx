@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api, ApiError } from "@/lib/api";
+import { PUBLIC_API_BASE } from "@/lib/brand";
 import { formatDate } from "@/lib/utils";
 
 export const Route = createFileRoute("/dashboard/keys")({
@@ -17,7 +18,7 @@ export const Route = createFileRoute("/dashboard/keys")({
 function KeysPage() {
   const initial = Route.useLoaderData();
   const [keys, setKeys] = useState(initial.keys);
-  const [label, setLabel] = useState("cursor");
+  const [label, setLabel] = useState("default");
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,7 +27,9 @@ function KeysPage() {
       <Card>
         <CardHeader>
           <CardTitle>Create API key</CardTitle>
-          <CardDescription>Use this key as the bearer token in Cursor&apos;s OpenAI-compatible settings.</CardDescription>
+          <CardDescription>
+            Use this key as the bearer token for OpenAI-compatible clients. Base URL: {PUBLIC_API_BASE}
+          </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3">
           <div className="min-w-[220px] flex-1 space-y-2">

@@ -77,10 +77,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   me: () => request<{ user: DashboardUser }>("/api/auth/me"),
-  login: (email: string, password: string) =>
-    request<{ user: DashboardUser }>("/api/auth/login", {
+  requestMagicLink: (email: string) =>
+    request<{ message: string; devLink?: string }>("/api/auth/magic-link", {
       method: "POST",
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ email })
     }),
   logout: () => request<{ ok: boolean }>("/api/auth/logout", { method: "POST" }),
   listKeys: () => request<{ keys: ApiKeySummary[] }>("/api/keys"),

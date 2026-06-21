@@ -1,61 +1,9 @@
 import { encryptJson, generateProxyApiKey, hashApiKey } from "../crypto";
 import type { RuntimeEnv } from "../env";
 import type { CodexTokenBundle } from "../types";
-import { hashPassword, PasswordPolicyError, validatePasswordPolicy, verifyPassword } from "./password";
 import type { DashboardUser } from "./session";
 
-const GENERIC_AUTH_ERROR = "Invalid email or password";
 const MAX_TOKEN_FIELD_LENGTH = 8192;
-
-export async function registerUser(
-  env: RuntimeEnv,
-  input: { email: string; password: string; displayName?: string | null }
-): Promise<{ userId: string }> {
-  if (env.ENABLE_PUBLIC_REGISTER !== "true") {
-    throw new DashboardError(403, "Registration is disabled");
-  }
-
-  validatePasswordPolicy(input.password);
-
-  const existing = await env.DB.prepare("SELECT id FROM users WHERE email = ? LIMIT 1").bind(input.email).first();
-  if (existing) {
-    throw new DashboardError(401, GENERIC_AUTH_ERROR);
-  }
-
-  const { hash, salt } = await hashPassword(input.password);
-  const userId = crypto.randomUUID();
-
-  await env.DB.prepare(
-    `INSERT INTO users (id, email, display_name, password_hash, password_salt, status)
-     VALUES (?, ?, ?, ?, ?, 'active')`
-  )
-    .bind(userId, input.email, input.displayName ?? null, hash, salt)
-    .run();
-
-  return { userId };
-}
-
-export async function loginUser(
-  env: RuntimeEnv,
-  input: { email: string; password: string }
-): Promise<{ userId: string }> {
-  const row = await env.DB.prepare(
-    "SELECT id, password_hash, password_salt, status FROM users WHERE email = ? LIMIT 1"
-  )
-    .bind(input.email)
-    .first<{ id: string; password_hash: string | null; password_salt: string | null; status: string }>();
-
-  if (!row || row.status !== "active" || !row.password_hash || !row.password_salt) {
-    throw new DashboardError(401, GENERIC_AUTH_ERROR);
-  }
-
-  const valid = await verifyPassword(input.password, row.password_hash, row.password_salt);
-  if (!valid) {
-    throw new DashboardError(401, GENERIC_AUTH_ERROR);
-  }
-
-  return { userId: row.id };
-}
 
 export async function listApiKeys(env: RuntimeEnv, userId: string) {
   const result = await env.DB.prepare(

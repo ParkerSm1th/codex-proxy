@@ -3,14 +3,12 @@ import { tmpdir, homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawn } from "node:child_process";
 import { encryptJson, generateProxyApiKey, hashApiKey } from "../src/crypto";
-import { hashPassword, validatePasswordPolicy } from "../src/dashboard/password";
 import type { CodexTokenBundle } from "../src/types";
 
 interface Options {
   authFile: string;
   email: string;
   displayName: string | null;
-  password: string | null;
   label: string;
   database: string;
   remote: boolean;
@@ -31,7 +29,6 @@ const proxyApiKey = generateProxyApiKey();
 const keyHash = await hashApiKey(proxyApiKey, apiKeyPepper);
 const encryptedBundle = await encryptJson(bundle, tokenEncryptionKey);
 const chatgptAccountId = getString(rawAuth.chatgpt_account_id) ?? getString(bundle.chatgpt_account_id);
-const passwordCreds = options.password ? await hashPassword(options.password) : null;
 const userId = crypto.randomUUID();
 const keyId = crypto.randomUUID();
 const keyPrefix = proxyApiKey.slice(4, 12);
@@ -39,8 +36,6 @@ const sqlText = buildSql({
   userId,
   email: options.email,
   displayName: options.displayName,
-  passwordHash: passwordCreds?.hash ?? null,
-  passwordSalt: passwordCreds?.salt ?? null,
   keyHash,
   keyLabel: options.label,
   keyId,
@@ -64,6 +59,7 @@ console.log(`Email: ${options.email}`);
 console.log(`Database: ${options.database} (${options.remote ? "remote" : "local"})`);
 console.log("Store this proxy API key now; only its hash was persisted:");
 console.log(proxyApiKey);
+console.log("The user can sign in at /login with a magic link sent to this email.");
 
 function normalizeTokenBundle(auth: Record<string, unknown>): CodexTokenBundle {
   const candidate = isRecord(auth.tokens) ? auth.tokens : isRecord(auth.token) ? auth.token : auth;
@@ -112,8 +108,6 @@ function buildSql(input: {
   userId: string;
   email: string;
   displayName: string | null;
-  passwordHash: string | null;
-  passwordSalt: string | null;
   keyHash: string;
   keyLabel: string;
   keyId: string;
@@ -123,11 +117,9 @@ function buildSql(input: {
 }): string {
   return `
 INSERT INTO users (id, email, display_name, password_hash, password_salt, status)
-VALUES (${sqlValue(input.userId)}, ${sqlValue(input.email)}, ${sqlValue(input.displayName)}, ${sqlValue(input.passwordHash)}, ${sqlValue(input.passwordSalt)}, 'active')
+VALUES (${sqlValue(input.userId)}, ${sqlValue(input.email)}, ${sqlValue(input.displayName)}, NULL, NULL, 'active')
 ON CONFLICT(email) DO UPDATE SET
-  display_name = excluded.display_name,
-  password_hash = COALESCE(excluded.password_hash, users.password_hash),
-  password_salt = COALESCE(excluded.password_salt, users.password_salt),
+  display_name = COALESCE(excluded.display_name, users.display_name),
   status = 'active';
 
 INSERT INTO api_keys (id, key_hash, user_id, label, key_prefix)
@@ -204,20 +196,14 @@ function parseArgs(args: string[]): Options {
 
   const email = stringArg(values, "email");
   if (!email) {
-    fail("Usage: npm run provision -- --email user@example.com --password <password> [--auth-file ~/.codex/auth.json] [--remote]");
-  }
-
-  const password = stringArg(values, "password");
-  if (password) {
-    validatePasswordPolicy(password);
+    fail("Usage: npm run provision -- --email user@example.com [--auth-file ~/.codex/auth.json] [--remote]");
   }
 
   return {
     authFile: stringArg(values, "auth-file") ?? "~/.codex/auth.json",
     email,
     displayName: stringArg(values, "display-name"),
-    password,
-    label: stringArg(values, "label") ?? "cursor",
+    label: stringArg(values, "label") ?? "default",
     database: stringArg(values, "database") ?? "codex-proxy-db",
     remote: values.get("remote") === true,
     dryRun: values.get("dry-run") === true

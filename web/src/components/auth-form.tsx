@@ -1,4 +1,3 @@
-import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Command } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,17 +11,16 @@ interface AuthFormProps {
   title: string;
   description: string;
   submitLabel: string;
-  onSubmit: (email: string, password: string, displayName?: string) => Promise<void>;
-  showDisplayName?: boolean;
+  onSubmit: (email: string) => Promise<{ message: string; devLink?: string }>;
   footer?: React.ReactNode;
+  initialError?: string | null;
 }
 
-export function AuthForm({ title, description, submitLabel, onSubmit, showDisplayName, footer }: AuthFormProps) {
+export function AuthForm({ title, description, submitLabel, onSubmit, footer, initialError }: AuthFormProps) {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [displayName, setDisplayName] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(initialError ?? null);
   const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState<{ message: string; devLink?: string } | null>(null);
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
@@ -35,10 +33,10 @@ export function AuthForm({ title, description, submitLabel, onSubmit, showDispla
         </div>
         <div className="space-y-2">
           <blockquote className="text-lg leading-relaxed">
-            {BRAND_TAGLINE} Track every request and see how much you save versus API list pricing.
+            {BRAND_TAGLINE} Track usage and manage proxy keys from one place.
           </blockquote>
         </div>
-        <p className="text-sm text-muted-foreground">OpenAI-compatible proxy for Codex subscription users.</p>
+        <p className="text-sm text-muted-foreground">Codex only for now. OpenAI-compatible API on your subscription.</p>
       </div>
 
       <div className="flex items-center justify-center p-6 md:p-10">
@@ -48,56 +46,57 @@ export function AuthForm({ title, description, submitLabel, onSubmit, showDispla
             <CardDescription>{description}</CardDescription>
           </CardHeader>
           <CardContent>
-            <form
-              className="space-y-4"
-              onSubmit={async (event) => {
-                event.preventDefault();
-                setLoading(true);
-                setError(null);
-                try {
-                  await onSubmit(email, password, displayName || undefined);
-                  window.location.href = "/dashboard";
-                } catch (submitError) {
-                  setError(submitError instanceof ApiError ? submitError.message : "Something went wrong");
-                } finally {
-                  setLoading(false);
-                }
-              }}
-            >
-              {showDisplayName ? (
+            {sent ? (
+              <div className="space-y-4 text-sm">
+                <p>{sent.message}</p>
+                {sent.devLink ? (
+                  <p className="break-all rounded-md border bg-muted/40 p-3 font-mono text-xs">{sent.devLink}</p>
+                ) : null}
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    setSent(null);
+                    setEmail("");
+                  }}
+                >
+                  Use a different email
+                </Button>
+              </div>
+            ) : (
+              <form
+                className="space-y-4"
+                onSubmit={async (event) => {
+                  event.preventDefault();
+                  setLoading(true);
+                  setError(null);
+                  try {
+                    const result = await onSubmit(email);
+                    setSent(result);
+                  } catch (submitError) {
+                    setError(submitError instanceof ApiError ? submitError.message : "Something went wrong");
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+              >
                 <div className="space-y-2">
-                  <Label htmlFor="displayName">Display name</Label>
-                  <Input id="displayName" value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                  />
                 </div>
-              ) : null}
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  minLength={8}
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                />
-              </div>
-              {error ? <p className="text-sm text-destructive">{error}</p> : null}
-              <Button className="w-full" disabled={loading} type="submit">
-                {loading ? "Working…" : submitLabel}
-              </Button>
-            </form>
+                {error ? <p className="text-sm text-destructive">{error}</p> : null}
+                <Button className="w-full" disabled={loading} type="submit">
+                  {loading ? "Sending link…" : submitLabel}
+                </Button>
+              </form>
+            )}
             {footer ? <div className="mt-6 text-sm text-muted-foreground">{footer}</div> : null}
           </CardContent>
         </Card>
@@ -108,8 +107,8 @@ export function AuthForm({ title, description, submitLabel, onSubmit, showDispla
 
 export function AuthFooter() {
   return (
-    <p className="text-sm text-muted-foreground">
-      Accounts are provisioned by your team admin via the CLI. Contact them if you need access.
+    <p>
+      New here? Enter your email above to create an account and sign in with the same magic link.
     </p>
   );
 }

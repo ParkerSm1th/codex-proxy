@@ -17,7 +17,8 @@
     "CODEX_UPSTREAM_URL": "https://chatgpt.com/backend-api/codex/responses",
     "CODEX_OAUTH_TOKEN_URL": "https://auth.openai.com/oauth/token",
     "CODEX_OAUTH_CLIENT_ID": "app_EMoamEEZ73f0CkXaXp7hrann",
-    "ENABLE_CONTAINER_RELAY": "true"
+    "ENABLE_CONTAINER_RELAY": "true",
+    "PUBLIC_APP_ORIGIN": "https://usemysub.com"
   },
   "d1_databases": [
     {

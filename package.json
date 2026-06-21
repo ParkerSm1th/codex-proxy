@@ -1,0 +1,28 @@
+{
+  "name": "codex-proxy",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "cf-types": "wrangler types",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "deploy:dry-run": "wrangler deploy --dry-run",
+    "build:web": "npm run build --prefix web",
+    "build": "npm run build:web",
+    "deploy": "npm run build:web && wrangler deploy",
+    "provision": "tsx scripts/import-codex-auth.ts"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "latest",
+    "@types/node": "latest",
+    "tsx": "latest",
+    "typescript": "latest",
+    "vitest": "latest",
+    "wrangler": "latest"
+  },
+  "dependencies": {
+    "@cloudflare/containers": "^0.3.7"
+  }
+}

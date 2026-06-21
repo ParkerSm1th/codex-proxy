@@ -1,0 +1,4 @@
+# Copy to .dev.vars and replace with real local-only values.
+# Never commit .dev.vars.
+API_KEY_PEPPER="replace-with-random-32-byte-secret"
+TOKEN_ENCRYPTION_KEY="replace-with-32-byte-base64url-or-64-char-hex-key"

@@ -1,0 +1,60 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "codex-proxy",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-06-21",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "vars": {
+    "CODEX_UPSTREAM_URL": "https://chatgpt.com/backend-api/codex/responses",
+    "CODEX_OAUTH_TOKEN_URL": "https://auth.openai.com/oauth/token",
+    "CODEX_OAUTH_CLIENT_ID": "app_EMoamEEZ73f0CkXaXp7hrann",
+    "ENABLE_CONTAINER_RELAY": "true"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "codex-proxy-db",
+      "database_id": "c22bafd1-8224-4801-870a-c953532015fe",
+      "migrations_dir": "./migrations"
+    }
+  ],
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["TokenBroker"]
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": ["CodexUpstreamRelay"]
+    }
+  ],
+  "containers": [
+    {
+      "class_name": "CodexUpstreamRelay",
+      "image": "./containers/upstream-relay/Dockerfile",
+      "instance_type": "lite",
+      "max_instances": 3
+    }
+  ],
+  "assets": {
+    "directory": "./web/dist/client",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "TOKEN_BROKER",
+        "class_name": "TokenBroker"
+      },
+      {
+        "name": "UPSTREAM_RELAY",
+        "class_name": "CodexUpstreamRelay"
+      }
+    ]
+  }
+}

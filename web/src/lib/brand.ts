@@ -1,5 +1,6 @@
 export const BRAND_NAME = "UseMySub";
 export const BRAND_TAGLINE = "A proxy that uses your Codex subscription.";
+export const BRAND_GITHUB_URL = "https://github.com/ParkerSm1th/codex-proxy";
 export const PUBLIC_ORIGIN = "https://usemysub.com";
 export const PUBLIC_API_BASE = `${PUBLIC_ORIGIN}/v1`;
 export const BRAND_ICON_PATH = "/icon.png";
